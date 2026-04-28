@@ -57,7 +57,7 @@ public class TweetSleepCount {
         private final Map<Integer, Integer> counts = new HashMap<>();
 
         @Override
-        protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+        protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context) {
             int sum = 0;
             for (IntWritable value : values) {
                 sum += value.get();
