@@ -18,14 +18,14 @@ public class TweetRecordReader extends RecordReader<LongWritable, Text> {
     private long end;
     private long pos;
 
-    private LongWritable key = new LongWritable();
-    private Text value = new Text();
+    private final LongWritable key = new LongWritable();
+    private final Text value = new Text();
 
     private FSDataInputStream fileIn;
     private LineReader lineReader;
 
     @Override
-    public void initialize(InputSplit genSplit, TaskAttemptContext context) throws IOException, InterruptedException {
+    public void initialize(InputSplit genSplit, TaskAttemptContext context) throws IOException {
         FileSplit split = (FileSplit) genSplit;
         Configuration conf = context.getConfiguration();
 
@@ -50,6 +50,84 @@ public class TweetRecordReader extends RecordReader<LongWritable, Text> {
         }
     }
 
+    @Override
+    public boolean nextKeyValue() throws IOException {
+        if (pos >= end) return false;
 
+        Text line = new Text();
+        StringBuilder tweet = new StringBuilder();
+        long recordStart = pos;
+        boolean sawContent = false;
 
+        while (pos < end) {
+            int bytes = lineReader.readLine(line);
+            if (bytes <= 0) break;
+
+            pos += bytes;
+            String current = line.toString();
+
+            if (current.trim().isEmpty()) {
+                if (!tweet.isEmpty()) {
+                    key.set(recordStart);
+                    value.set(tweet.toString());
+                    return true;
+                }
+                continue;
+            }
+
+            if (tweet.isEmpty()) recordStart = pos - bytes;
+            tweet.append(current).append('\n');
+            if (current.startsWith("W")) sawContent = true;
+
+            if (sawContent) {
+                int maybeBlank = lineReader.readLine(line);
+                if (maybeBlank > 0) {
+                    pos += maybeBlank;
+                    String separator = line.toString();
+                    if (!separator.trim().isEmpty()) {
+                        tweet.append(separator).append('\n');
+                    }
+                }
+
+                key.set(recordStart);
+                value.set(tweet.toString());
+            }
+        }
+
+        if (!tweet.isEmpty()) {
+            key.set(recordStart);
+            value.set(tweet.toString());
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public LongWritable getCurrentKey() {
+        return key;
+    }
+
+    @Override
+    public Text getCurrentValue() {
+        return value;
+    }
+
+    @Override
+    public float getProgress() {
+        if (start == end) {
+            return 0.0f;
+        }
+        return Math.min(1.0f, (pos - start) / (float) (end - start));
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (lineReader != null) {
+            lineReader.close();
+        }
+        if (fileIn != null) {
+            fileIn.close();
+        }
+    }
 }
