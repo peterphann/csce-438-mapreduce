@@ -12,15 +12,13 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 public class TweetSleepCount {
 
-    public static class SleepMapper extends Mapper<LongWritable, Text, IntWritable, IntWritable> {
+    public static class SleepMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
+        private final Text outHour = new Text();
         private static final IntWritable ONE = new IntWritable(1);
-        private final IntWritable outHour = new IntWritable();
 
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -46,33 +44,27 @@ public class TweetSleepCount {
 
             try {
                 int hour = Integer.parseInt(timePieces[0]);
-                outHour.set(hour);
+                String strHour = String.format("%02d", hour);
+                outHour.set(strHour + ":00 - " + strHour + ":59");
                 context.write(outHour, ONE);
             } catch (NumberFormatException ignored) {}
 
         }
     }
 
-    public static class SleepReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
-        private final Map<Integer, Integer> counts = new HashMap<>();
+    public static class SleepReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
 
         @Override
-        protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context) {
+        protected void reduce(Text key, Iterable<IntWritable> values, Context context)
+                throws IOException, InterruptedException {
             int sum = 0;
             for (IntWritable value : values) {
                 sum += value.get();
             }
-            counts.put(key.get(), sum);
-        }
-
-        @Override
-        protected void cleanup(Context context) throws IOException, InterruptedException {
-            for (int hour = 0; hour < 24; hour++) {
-                int count = counts.getOrDefault(hour, 0);
-                context.write(new IntWritable(hour), new IntWritable(count));
-            }
+            context.write(key, new IntWritable(sum));
         }
     }
+
 
     public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
         if (args.length != 2) {
@@ -88,9 +80,9 @@ public class TweetSleepCount {
         job.setMapperClass(SleepMapper.class);
         job.setReducerClass(SleepReducer.class);
 
-        job.setMapOutputKeyClass(IntWritable.class);
+        job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);
-        job.setOutputKeyClass(IntWritable.class);
+        job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
 
         job.setNumReduceTasks(1);
