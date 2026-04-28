@@ -18,9 +18,9 @@ import java.util.Map;
 
 public class TweetHourCount {
 
-    public static class HourMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
+    public static class HourMapper extends Mapper<LongWritable, Text, IntWritable, IntWritable> {
         private static final IntWritable ONE = new IntWritable(1);
-        private final Text outHour = new Text();
+        private final IntWritable outHour = new IntWritable();
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -36,25 +36,32 @@ public class TweetHourCount {
 
             try {
                 int hour = Integer.parseInt(timePieces[0]);
-                String strHour = String.format("%02d", hour);
-                outHour.set(strHour + ":00 - " + strHour + ":59");
+                outHour.set(hour);
                 context.write(outHour, ONE);
             } catch (NumberFormatException ignored) {}
         }
 
     }
 
-    public static class HourReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+    public static class HourReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
+        private final Map<Integer, Integer> counts = new HashMap<>();
 
         @Override
-        protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+        protected void reduce(IntWritable key, Iterable<IntWritable> values, Context context) {
             int sum = 0;
             for (IntWritable v : values) {
                 sum += v.get();
             }
-            context.write(key, new IntWritable(sum));
+            counts.put(key.get(), sum);
         }
 
+        @Override
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+            for (int hour = 0; hour < 24; hour++) {
+                int count = counts.getOrDefault(hour, 0);
+                context.write(new IntWritable(hour), new IntWritable(count));
+            }
+        }
     }
 
     public static void main(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
@@ -71,9 +78,9 @@ public class TweetHourCount {
         job.setMapperClass(HourMapper.class);
         job.setReducerClass(HourReducer.class);
 
-        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputKeyClass(IntWritable.class);
         job.setMapOutputValueClass(IntWritable.class);
-        job.setOutputKeyClass(Text.class);
+        job.setOutputKeyClass(IntWritable.class);
         job.setOutputValueClass(IntWritable.class);
 
         job.setNumReduceTasks(1);
