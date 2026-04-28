@@ -25,7 +25,7 @@ public class TweetHourCount {
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String line = value.toString().trim();
-            if (!line.startsWith("T ")) return;
+            if (!line.matches("^T\\s+.*")) return;
 
             String[] parts = line.split("\\s+");
             if (parts.length < 3) return;
