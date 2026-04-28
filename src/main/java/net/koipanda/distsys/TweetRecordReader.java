@@ -30,7 +30,7 @@ public class TweetRecordReader extends RecordReader<LongWritable, Text> {
         Configuration conf = context.getConfiguration();
 
         start = split.getStart();
-        end = split.getLength();
+        end = start + split.getLength();
 
         Path file = split.getPath();
         fileIn = file.getFileSystem(conf).open(file);
@@ -91,6 +91,7 @@ public class TweetRecordReader extends RecordReader<LongWritable, Text> {
 
                 key.set(recordStart);
                 value.set(tweet.toString());
+                return true;
             }
         }
 
