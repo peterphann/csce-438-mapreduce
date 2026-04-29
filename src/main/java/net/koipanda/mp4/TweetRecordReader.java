@@ -1,4 +1,4 @@
-package net.koipanda.distsys;
+package net.koipanda.mp4;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;

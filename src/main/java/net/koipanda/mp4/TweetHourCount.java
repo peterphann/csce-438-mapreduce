@@ -1,5 +1,6 @@
-package net.koipanda.distsys;
+package net.koipanda.mp4;
 
+import net.koipanda.mp4.util.TweetTimeUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -13,6 +14,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
+import java.util.OptionalInt;
 
 public class TweetHourCount {
 
@@ -28,16 +30,11 @@ public class TweetHourCount {
             String[] parts = line.split("\\s+");
             if (parts.length < 3) return;
 
-            String timePart = parts[2];
-            String[] timePieces = timePart.split(":");
-            if (timePieces.length < 1) return;
+            OptionalInt hourOpt = TweetTimeUtil.extractHourFromTimeLine(line);
+            if (hourOpt.isEmpty()) return;
 
-            try {
-                int hour = Integer.parseInt(timePieces[0]);
-                String strHour = String.format("%02d", hour);
-                outHour.set(strHour + ":00 - " + strHour + ":59");
-                context.write(outHour, ONE);
-            } catch (NumberFormatException ignored) {}
+            outHour.set(TweetTimeUtil.toHourBucketLabel(hourOpt.getAsInt()));
+            context.write(outHour, ONE);
         }
 
     }

@@ -1,5 +1,6 @@
-package net.koipanda.distsys;
+package net.koipanda.mp4;
 
+import net.koipanda.mp4.util.TweetTimeUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -13,6 +14,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import java.io.IOException;
 import java.util.Locale;
+import java.util.OptionalInt;
 
 public class TweetSleepCount {
 
@@ -33,22 +35,15 @@ public class TweetSleepCount {
             if (!timeLine.startsWith("T")) return;
             if (!contentLine.startsWith("W")) return;
 
+            // check if it contains sleep -- this matches any iteration of sleep (sleepy, asleep, etc) :D
             String content = contentLine.substring(1).trim().toLowerCase(Locale.ROOT);
             if (!content.contains("sleep")) return;
 
-            String[] parts = timeLine.split("\\s+");
-            if (parts.length < 3) return;
+            OptionalInt hourOpt = TweetTimeUtil.extractHourFromTimeLine(timeLine);
+            if (hourOpt.isEmpty()) return;
 
-            String[] timePieces = parts[2].split(":");
-            if (timePieces.length < 1) return;
-
-            try {
-                int hour = Integer.parseInt(timePieces[0]);
-                String strHour = String.format("%02d", hour);
-                outHour.set(strHour + ":00 - " + strHour + ":59");
-                context.write(outHour, ONE);
-            } catch (NumberFormatException ignored) {}
-
+            outHour.set(TweetTimeUtil.toHourBucketLabel(hourOpt.getAsInt()));
+            context.write(outHour, ONE);
         }
     }
 

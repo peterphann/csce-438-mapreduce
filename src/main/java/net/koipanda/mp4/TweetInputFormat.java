@@ -1,4 +1,4 @@
-package net.koipanda.distsys;
+package net.koipanda.mp4;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
