@@ -38,6 +38,7 @@ public class TweetRecordReader extends RecordReader<LongWritable, Text> {
         lineReader = new LineReader(fileIn, conf);
         pos = start;
 
+        // skip until first blank separator if the split starts mid-record
         if (start != 0) {
             Text dummy = new Text();
             while (pos < end) {
@@ -117,18 +118,14 @@ public class TweetRecordReader extends RecordReader<LongWritable, Text> {
     @Override
     public float getProgress() {
         if (start == end) {
-            return 0.0f;
+            return 0.0F;
         }
-        return Math.min(1.0f, (pos - start) / (float) (end - start));
+        return Math.min(1.0F, (pos - start) / (float) (end - start));
     }
 
     @Override
     public void close() throws IOException {
-        if (lineReader != null) {
-            lineReader.close();
-        }
-        if (fileIn != null) {
-            fileIn.close();
-        }
+        if (lineReader != null) lineReader.close();
+        if (fileIn != null) fileIn.close();
     }
 }

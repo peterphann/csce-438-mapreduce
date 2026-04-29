@@ -20,7 +20,7 @@ public class TweetHourCount {
 
     public static class HourMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
         private static final IntWritable ONE = new IntWritable(1);
-        private final Text outHour = new Text();
+        private final Text hourBucketKey = new Text();
 
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
@@ -33,8 +33,8 @@ public class TweetHourCount {
             OptionalInt hourOpt = TweetTimeUtil.extractHourFromTimeLine(line);
             if (hourOpt.isEmpty()) return;
 
-            outHour.set(TweetTimeUtil.toHourBucketLabel(hourOpt.getAsInt()));
-            context.write(outHour, ONE);
+            hourBucketKey.set(TweetTimeUtil.toHourBucketLabel(hourOpt.getAsInt()));
+            context.write(hourBucketKey, ONE);
         }
 
     }
